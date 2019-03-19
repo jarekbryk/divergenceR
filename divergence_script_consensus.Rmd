@@ -1,0 +1,60 @@
+---
+title: "Calculating DNA sequence divergence based on consensus loci"
+output: html_notebook
+---
+
+## Introduction
+
+This script compares two FASTA sequences from two loci and counts the number of differences and is run over two folders, each containing a set of many individual FASTA sequences (as many as there are loci you want to compare; we ran it on over 20000 loci in less than 30 s.).
+
+The input for this script is therefore two sets of loci, one from each compared species. Because of the nature of how these loci were obtained (RAD-seq data from _Stacks_ pipeline), they are named in the same way and therefore their order is the same (i.e. the first sequence in both folder comes from the same locus in two species).
+
+As an example input, I include 10 sequences (from 10 loci) for each of the two species we are comparing, _Apodemus flavicollis_ and _A. sylvaticus_.
+
+```{r}
+library("tidyverse")
+library("Biostrings")
+```
+
+Create list of files with the loci and sequences (keeping the path). We have 10 files (10 loci) for each species.
+
+```{r}
+flavicollis <- paste0("raw_data/flavicollis/",list.files("raw_data/flavicollis/"))
+sylvaticus <- paste0("raw_data/sylvaticus/",list.files("raw_data/sylvaticus/"))
+
+length(flavicollis)
+length(sylvaticus)
+
+head(flavicollis)
+head(sylvaticus)
+```
+
+### Prepare the function
+
+This function is based on https://www.biostars.org/p/16880/.
+
+```{r}
+divCalc <- function(x,y){
+	# x and y are Biostrings DNAStringSet objects with the same number of sequences of the same length in each object
+	# Inspiration: https://www.biostars.org/p/16880/
+	(rowSums(as.matrix(x) != as.matrix(y))/width(x))*100
+}
+```
+
+### Prepare the input objects
+
+```{r}
+# Read in sequences from all the loci
+DNAseqFF <- map(flavicollis, readDNAStringSet)
+DNAseqSS <- map(sylvaticus, readDNAStringSet)
+```
+
+### Run the function.
+
+```{r}
+# Run the function on every locus
+divergence_output <- map2(DNAseqFF, DNAseqSS, divCalc)
+
+# Calculate the average divergence across all loci
+mean(unlist(divergence_output))
+```
